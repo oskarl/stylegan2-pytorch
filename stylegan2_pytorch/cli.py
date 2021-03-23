@@ -186,4 +186,5 @@ def train_from_folder(
         join=True)
 
 def main():
+    print('Fire')
     fire.Fire(train_from_folder)
