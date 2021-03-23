@@ -185,6 +185,4 @@ def train_from_folder(
         nprocs=world_size,
         join=True)
 
-def main():
-    print('Fire')
-    fire.Fire(train_from_folder)
+fire.Fire(train_from_folder)
