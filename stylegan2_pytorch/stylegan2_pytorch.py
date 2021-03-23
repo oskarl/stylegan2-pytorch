@@ -730,6 +730,7 @@ class Trainer():
         *args,
         **kwargs
     ):
+        print('Init trainer')
         self.GAN_params = [args, kwargs]
         self.GAN = None
 
@@ -873,6 +874,8 @@ class Trainer():
             print(f'autosetting augmentation probability to {round(self.aug_prob * 100)}%')
 
     def train(self):
+        print('Start train')
+
         assert exists(self.loader), 'You must first initialize the data source with `.set_data_src(<folder of images>)`'
 
         if not exists(self.GAN):
