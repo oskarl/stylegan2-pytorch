@@ -155,6 +155,8 @@ def train_from_folder(
         log = log
     )
 
+    print('start train from folder')
+
     if generate:
         model = Trainer(**model_args)
         model.load(load_from)
