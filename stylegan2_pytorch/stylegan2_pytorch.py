@@ -27,8 +27,8 @@ from kornia.filters import filter2D
 
 import torchvision
 from torchvision import transforms
-from stylegan2_pytorch.version import __version__
-from stylegan2_pytorch.diff_augment import DiffAugment
+#from stylegan2_pytorch.version import __version__
+from diff_augment import DiffAugment
 
 from vector_quantize_pytorch import VectorQuantize
 from linear_attention_transformer import ImageLinearAttention
@@ -1265,7 +1265,7 @@ class Trainer():
     def save(self, num):
         save_data = {
             'GAN': self.GAN.state_dict(),
-            'version': __version__
+            'version': 1#__version__
         }
 
         if self.GAN.fp16:
