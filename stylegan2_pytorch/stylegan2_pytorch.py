@@ -1034,11 +1034,11 @@ class Trainer():
             self.pl_mean = self.pl_length_ma.update_average(self.pl_mean, avg_pl_length)
             self.track(self.pl_mean, 'PL')
 
-        if self.is_main and self.steps % 10 == 0 and self.steps > 20000:
+        if self.is_main and self.steps % 10 == 0:# and self.steps > 20000:
             self.GAN.EMA()
 
-        if self.is_main and self.steps <= 25000 and self.steps % 1000 == 2:
-            self.GAN.reset_parameter_averaging()
+        #if self.is_main and self.steps <= 25000 and self.steps % 1000 == 2:
+        #    self.GAN.reset_parameter_averaging()
 
         # save from NaN errors
 
@@ -1058,9 +1058,11 @@ class Trainer():
 
             if exists(self.calculate_fid_every) and self.steps % self.calculate_fid_every == 0 and self.steps != 0:
                 num_batches = math.ceil(self.calculate_fid_num_images / self.batch_size)
-                fid = self.calculate_fid(num_batches)
+                fid_ema, fid = self.calculate_fid(num_batches)
                 self.last_fid = fid
 
+                with open(str(self.results_dir / self.name / f'fid_ema_scores.txt'), 'a') as f:
+                    f.write(f'{self.steps},{fid_ema}\n')
                 with open(str(self.results_dir / self.name / f'fid_scores.txt'), 'a') as f:
                     f.write(f'{self.steps},{fid}\n')
 
@@ -1114,7 +1116,44 @@ class Trainer():
 
     @torch.no_grad()
     def calculate_fid(self, num_batches):
-        from pytorch_fid import fid_score
+        import Evaluators as Evaluators
+
+        torch.cuda.empty_cache()
+
+        fid_img_size = 128
+        bs = 32
+        fid = Evaluators.FID(batch_size=bs, real_mean_cov_file='../../drive/MyDrive/GAN/files/ffhq_128_stats.pickle')#celeba_64_stats.pickle')
+        z_dim = 512
+
+        self.GAN.eval()
+
+        latent_dim = self.GAN.G.latent_dim
+        image_size = self.GAN.G.image_size
+        num_layers = self.GAN.G.num_layers
+
+        imgs = []
+        for i in range(10000//bs + 1):
+            latents = noise_list(bs, num_layers, latent_dim, device=self.rank)
+            noise = image_noise(bs, image_size, device=self.rank)
+            generated_images = self.generate_truncated(self.GAN.S, self.GAN.G, latents, noise, trunc_psi = self.trunc_psi)
+            g2 = generated_images.cpu().view(generated_images.size(0), 3, fid_img_size, fid_img_size)
+            g2 = g2.permute(0, 2, 3, 1)
+            imgs.append(g2)
+        imgs = torch.cat(imgs).data.numpy()
+
+        imgs_ema = []
+        for i in range(10000//bs + 1):
+            latents = noise_list(bs, num_layers, latent_dim, device=self.rank)
+            noise = image_noise(bs, image_size, device=self.rank)
+            # moving averages
+            generated_images = self.generate_truncated(self.GAN.SE, self.GAN.GE, latents, noise, trunc_psi = self.trunc_psi)
+            g2 = generated_images.cpu().view(generated_images.size(0), 3, fid_img_size, fid_img_size)
+            g2 = g2.permute(0, 2, 3, 1)
+            imgs.append(g2)
+        imgs_ema = torch.cat(imgs_ema).data.numpy()
+        return (float(fid.fd(imgs_ema, batch_size=bs)),float(fid.fd(imgs, batch_size=bs)))
+
+        '''from pytorch_fid import fid_score
         torch.cuda.empty_cache()
 
         real_path = self.fid_dir / 'real'
@@ -1155,7 +1194,7 @@ class Trainer():
             for j, image in enumerate(generated_images.unbind(0)):
                 torchvision.utils.save_image(image, str(fake_path / f'{str(j + batch_num * self.batch_size)}-ema.{ext}'))
 
-        return fid_score.calculate_fid_given_paths([str(real_path), str(fake_path)], 256, noise.device, 2048)
+        return fid_score.calculate_fid_given_paths([str(real_path), str(fake_path)], 256, noise.device, 2048)'''
 
     @torch.no_grad()
     def truncate_style(self, tensor, trunc_psi = 0.75):
@@ -1326,3 +1365,4 @@ class ModelLoader:
         images = self.model.GAN.GE(w_tensors, noise)
         images.clamp_(0., 1.)
         return images
+
