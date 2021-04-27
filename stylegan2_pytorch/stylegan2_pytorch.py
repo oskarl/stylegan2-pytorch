@@ -1149,7 +1149,7 @@ class Trainer():
             generated_images = self.generate_truncated(self.GAN.SE, self.GAN.GE, latents, noise, trunc_psi = self.trunc_psi)
             g2 = generated_images.cpu().view(generated_images.size(0), 3, fid_img_size, fid_img_size)
             g2 = g2.permute(0, 2, 3, 1)
-            imgs.append(g2)
+            imgs_ema.append(g2)
         imgs_ema = torch.cat(imgs_ema).data.numpy()
         return (float(fid.fd(imgs_ema, batch_size=bs)),float(fid.fd(imgs, batch_size=bs)))
 
