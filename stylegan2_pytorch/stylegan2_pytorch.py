@@ -50,7 +50,7 @@ assert torch.cuda.is_available(), 'You need to have an Nvidia GPU with CUDA inst
 
 # FID
 bs = 32
-fid = Evaluators.FID(batch_size=bs, real_mean_cov_file='../../drive/MyDrive/GAN/files/ffhq_128_stats.pickle')#celeba_64_stats.pickle')
+fid = Evaluators.FID(batch_size=bs, real_mean_cov_file='../../drive/MyDrive/GAN/files/ffhq_128_stats.pickle', resize_to=139)#celeba_64_stats.pickle')
 
 # constants
 
