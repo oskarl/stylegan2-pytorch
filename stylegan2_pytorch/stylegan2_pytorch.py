@@ -4,6 +4,8 @@ import math
 import fire
 import json
 
+import Evaluators as Evaluators
+
 from tqdm import tqdm
 from math import floor, log2
 from random import random
@@ -1119,8 +1121,6 @@ class Trainer():
 
     @torch.no_grad()
     def calculate_fid(self, num_batches):
-        import Evaluators as Evaluators
-
         torch.cuda.empty_cache()
 
         fid_img_size = 128
