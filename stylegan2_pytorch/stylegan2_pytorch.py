@@ -1152,10 +1152,10 @@ class Trainer():
             g2 = g2.permute(0, 2, 3, 1)
             imgs_ema.append(g2)
         imgs_ema = torch.cat(imgs_ema).data.numpy()
-        fid_ema, fid = (float(fid.fd(imgs_ema, batch_size=bs)),float(fid.fd(imgs, batch_size=bs)))
+        fid_ema, fid_s = (float(fid.fd(imgs_ema, batch_size=bs)),float(fid.fd(imgs, batch_size=bs)))
         torch.cuda.empty_cache()
 
-        return (fid_ema, fid)
+        return (fid_ema, fid_s)
 
         '''from pytorch_fid import fid_score
         torch.cuda.empty_cache()
