@@ -899,8 +899,8 @@ class Trainer():
         aug_kwargs = {'prob': aug_prob, 'types': aug_types}
 
         apply_gradient_penalty = self.steps % 4 == 0
-        apply_path_penalty = not self.no_pl_reg and self.steps > 5000 and self.steps % 32 == 0
-        apply_cl_reg_to_generated = self.steps > 20000
+        apply_path_penalty = False#not self.no_pl_reg and self.steps > 5000 and self.steps % 32 == 0
+        apply_cl_reg_to_generated = False#self.steps > 20000
 
         S = self.GAN.S if not self.is_ddp else self.S_ddp
         G = self.GAN.G if not self.is_ddp else self.G_ddp
