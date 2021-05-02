@@ -1192,7 +1192,6 @@ class Trainer():
 
         torch.cuda.empty_cache()
 
-        create_inception_graph(inception_path)
         with tf.Session() as sess:
           sess.run(tf.global_variables_initializer())
           m,s = calculate_activation_statistics(imgs, sess)
@@ -1735,3 +1734,4 @@ def check_or_download_inception(inception_path):
     return str(model_file)
 
 inception_path = check_or_download_inception(None) # download inception network
+create_inception_graph(inception_path)
