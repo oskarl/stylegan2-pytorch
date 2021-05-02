@@ -1153,7 +1153,7 @@ class Trainer():
             g2 = g2.permute(0, 2, 3, 1)
             imgs.append(g2)
         imgs = torch.cat(imgs).data.numpy() * 255
-        imgs = fd._preprocess(imgs)
+        imgs = fid.fd._preprocess(imgs)
 
         imgs_ema = []
         for i in range(10000//bs + 1):
@@ -1165,7 +1165,7 @@ class Trainer():
             g2 = g2.permute(0, 2, 3, 1)
             imgs_ema.append(g2)
         imgs_ema = torch.cat(imgs_ema).data.numpy() * 255
-        imgs_ema = fd._preprocess(imgs_ema)
+        imgs_ema = fid.fd._preprocess(imgs_ema)
 
         torch.cuda.empty_cache()
 
