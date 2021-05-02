@@ -50,6 +50,8 @@ from linear_attention_transformer import ImageLinearAttention
 from PIL import Image
 from pathlib import Path
 
+import extragradient
+
 try:
     from apex import amp
     APEX_AVAILABLE = True
@@ -630,7 +632,7 @@ class Discriminator(nn.Module):
         return x.squeeze(), quantize_loss
 
 class StyleGAN2(nn.Module):
-    def __init__(self, image_size, latent_dim = 512, fmap_max = 512, style_depth = 8, network_capacity = 16, transparent = False, fp16 = False, cl_reg = False, steps = 1, lr = 1e-4, ttur_mult = 2, fq_layers = [], fq_dict_size = 256, attn_layers = [], no_const = False, lr_mlp = 0.1, rank = 0):
+    def __init__(self, image_size, latent_dim = 512, fmap_max = 512, style_depth = 8, network_capacity = 16, transparent = False, fp16 = False, cl_reg = False, steps = 1, lr = 1e-4, ttur_mult = 2, fq_layers = [], fq_dict_size = 256, attn_layers = [], no_const = False, lr_mlp = 0.1, rank = 0, opt_scheme = 'Adam'):
         super().__init__()
         self.lr = lr
         self.steps = steps
@@ -660,8 +662,18 @@ class StyleGAN2(nn.Module):
 
         # init optimizers
         generator_params = list(self.G.parameters()) + list(self.S.parameters())
-        self.G_opt = Adam(generator_params, lr = self.lr, betas=(0.5, 0.9))
-        self.D_opt = Adam(self.D.parameters(), lr = self.lr * ttur_mult, betas=(0.5, 0.9))
+        self.opt_scheme = opt_scheme
+        if opt_scheme == 'Adam':
+            self.G_opt = Adam(generator_params, lr = self.lr, betas=(0.5, 0.9))
+            self.D_opt = Adam(self.D.parameters(), lr = self.lr * ttur_mult, betas=(0.5, 0.9))
+        elif opt_scheme == 'ExtraAdam':
+            self.G_opt = extragradient.ExtraAdam(generator_params, lr = self.lr, betas=(0.5, 0.9))
+            self.D_opt = extragradient.ExtraAdam(self.D.parameters(), lr = self.lr * ttur_mult, betas=(0.5, 0.9))
+        elif opt_scheme == 'OptAdam':
+            self.G_opt = extragradient.OptimisticAdam(generator_params, lr = self.lr, betas=(0.5, 0.9))
+            self.D_opt = extragradient.OptimisticAdam(self.D.parameters(), lr = self.lr * ttur_mult, betas=(0.5, 0.9))
+        print(self.G_opt)
+        print(self.D_opt)
 
         # init weights
         self._init_weights()
@@ -744,6 +756,7 @@ class Trainer():
         rank = 0,
         world_size = 1,
         log = False,
+        opt_scheme = 'Adam',
         *args,
         **kwargs
     ):
@@ -765,6 +778,8 @@ class Trainer():
         self.network_capacity = network_capacity
         self.fmap_max = fmap_max
         self.transparent = transparent
+
+        self.opt_scheme = opt_scheme
 
         self.fq_layers = cast_list(fq_layers)
         self.fq_dict_size = fq_dict_size
@@ -845,7 +860,7 @@ class Trainer():
         
     def init_GAN(self):
         args, kwargs = self.GAN_params
-        self.GAN = StyleGAN2(lr = self.lr, lr_mlp = self.lr_mlp, ttur_mult = self.ttur_mult, image_size = self.image_size, network_capacity = self.network_capacity, fmap_max = self.fmap_max, transparent = self.transparent, fq_layers = self.fq_layers, fq_dict_size = self.fq_dict_size, attn_layers = self.attn_layers, fp16 = self.fp16, cl_reg = self.cl_reg, no_const = self.no_const, rank = self.rank, *args, **kwargs)
+        self.GAN = StyleGAN2(lr = self.lr, lr_mlp = self.lr_mlp, ttur_mult = self.ttur_mult, image_size = self.image_size, network_capacity = self.network_capacity, fmap_max = self.fmap_max, transparent = self.transparent, fq_layers = self.fq_layers, fq_dict_size = self.fq_dict_size, attn_layers = self.attn_layers, fp16 = self.fp16, cl_reg = self.cl_reg, no_const = self.no_const, rank = self.rank, opt_scheme = self.opt_scheme, *args, **kwargs)
 
         if self.is_ddp:
             ddp_kwargs = {'device_ids': [self.rank]}
@@ -997,7 +1012,10 @@ class Trainer():
         self.d_loss = float(total_disc_loss)
         self.track(self.d_loss, 'D')
 
-        self.GAN.D_opt.step()
+        if self.steps%2 == 0 and self.opt_scheme == 'ExtraAdam':
+            self.GAN.D_opt.extrapolation()
+        else:
+            self.GAN.D_opt.step()
 
         # train generator
 
@@ -1043,7 +1061,10 @@ class Trainer():
         self.g_loss = float(total_gen_loss)
         self.track(self.g_loss, 'G')
 
-        self.GAN.G_opt.step()
+        if self.steps%2 == 0 and self.opt_scheme == 'ExtraAdam':
+            self.GAN.G_opt.extrapolation()
+        else:
+            self.GAN.G_opt.step()
 
         # calculate moving averages
 
