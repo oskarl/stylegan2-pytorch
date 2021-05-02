@@ -1013,8 +1013,10 @@ class Trainer():
         self.track(self.d_loss, 'D')
 
         if self.steps%2 == 0 and self.opt_scheme == 'ExtraAdam':
+            print("extra")
             self.GAN.D_opt.extrapolation()
         else:
+            print("step")
             self.GAN.D_opt.step()
 
         # train generator
