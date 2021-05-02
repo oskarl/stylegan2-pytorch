@@ -4,6 +4,16 @@ import math
 import fire
 import json
 
+import numpy as np
+import os
+import gzip, pickle
+import tensorflow as tf
+from imageio import imread
+from scipy import linalg
+import pathlib
+import urllib
+import warnings
+
 import Evaluators as Evaluators
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
@@ -1398,17 +1408,6 @@ the pool_3 layer of the inception net for generated samples and real world
 samples respectivly.
 See --help to see further details.
 '''
-
-from __future__ import absolute_import, division, print_function
-import numpy as np
-import os
-import gzip, pickle
-import tensorflow as tf
-from imageio import imread
-from scipy import linalg
-import pathlib
-import urllib
-import warnings
 
 class InvalidFIDException(Exception):
     pass
